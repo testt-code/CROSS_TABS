@@ -234,7 +234,8 @@ export function useCollaborativeSession(
             }
             return [...prev, { ...newUser, lastSeen: Date.now() }];
           });
-          postMessage('user:join', currentUser);
+          // Respond with heartbeat instead of join to avoid infinite loop
+          postMessage('user:heartbeat', { userId, user: currentUser });
           break;
         }
 
@@ -472,11 +473,25 @@ export function useCollaborativeSession(
 
   // Heartbeat to maintain presence
   useEffect(() => {
-    const interval = setInterval(() => {
+    const sendHeartbeat = () => {
       postMessage('user:heartbeat', { userId, user: currentUser });
-    }, HEARTBEAT_INTERVAL);
+    };
 
-    return () => clearInterval(interval);
+    const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+
+    // Send heartbeat immediately when page becomes visible (handles browser throttling)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        sendHeartbeat();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [postMessage, userId, currentUser]);
 
   // Clean up inactive users

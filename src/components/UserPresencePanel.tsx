@@ -28,14 +28,24 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
 }) => {
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const prevUsersRef = useRef<Map<string, User>>(new Map());
-  const isInitialLoadRef = useRef(true);
+  const [isStabilized, setIsStabilized] = useState(false);
 
   useEffect(() => {
-    // Skip notifications during initial load (state sync)
-    // This prevents showing "joined" for users that were already there
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
+    if (loading) {
+      setIsStabilized(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
       prevUsersRef.current = new Map(users.map((u) => [u.id, u]));
+      setIsStabilized(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [loading, users]);
+
+  useEffect(() => {
+    if (!isStabilized) {
       return;
     }
 
@@ -68,7 +78,7 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
     });
 
     prevUsersRef.current = new Map(users.map((u) => [u.id, u]));
-  }, [users, currentUser.id]);
+  }, [users, currentUser.id, isStabilized]);
 
   useEffect(() => {
     if (notifications.length === 0) return;
