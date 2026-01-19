@@ -109,6 +109,7 @@ export interface CollaborativeActions {
 
   ping: () => Promise<string[]>;
   clearActivityFeed: () => void;
+  resetIdentity: () => void;
 }
 
 export interface UseCollaborativeSessionOptions {

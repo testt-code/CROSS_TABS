@@ -6,6 +6,7 @@ import { UserPresencePanel } from "@/components/UserPresencePanel"
 import { NavbarCounter } from "@/components/NavbarCounter"
 import { ChatPanel } from "@/components/ChatPanel"
 import { ActivityFeed } from "@/components/ActivityFeed"
+import { RestartIdentityButton } from "@/components/RestartIdentityButton"
 import { Button } from "@/components/ui/button"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
 import type { Theme } from "@/types"
@@ -27,6 +28,7 @@ type DashboardProps = {
   deleteMessage: CollaborativeSessionReturn['deleteMessage'];
   markTyping: CollaborativeSessionReturn['markTyping'];
   activityFeed: CollaborativeSessionReturn['activityFeed'];
+  resetIdentity: CollaborativeSessionReturn['resetIdentity'];
 };
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -43,6 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   deleteMessage,
   markTyping,
   activityFeed,
+  resetIdentity,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const onlineCount = users.length + 1; // +1 for current user
@@ -77,6 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             onDecrement={decrementCounter}
             onReset={resetCounter}
           />
+          <RestartIdentityButton onRestart={resetIdentity} />
           <ThemeToggle />
         </div>
       </header>
@@ -181,6 +185,7 @@ const CollaborativeApp: React.FC = () => {
     deleteMessage,
     markTyping,
     activityFeed,
+    resetIdentity,
     theme,
     setTheme,
   } = useCollaborativeSession();
@@ -206,6 +211,7 @@ const CollaborativeApp: React.FC = () => {
         deleteMessage={deleteMessage}
         markTyping={markTyping}
         activityFeed={activityFeed}
+        resetIdentity={resetIdentity}
       />
     </ThemeProvider>
   );

@@ -28,8 +28,17 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
 }) => {
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const prevUsersRef = useRef<Map<string, User>>(new Map());
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
+    // Skip notifications during initial load (state sync)
+    // This prevents showing "joined" for users that were already there
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      prevUsersRef.current = new Map(users.map((u) => [u.id, u]));
+      return;
+    }
+
     const prevUsers = prevUsersRef.current;
     const currentUserIds = new Set(users.map((u) => u.id));
     const prevUserIds = new Set(prevUsers.keys());

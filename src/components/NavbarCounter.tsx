@@ -22,6 +22,7 @@ export const NavbarCounter: React.FC<NavbarCounterProps> = ({
     <div className="flex items-center gap-2">
       {lastAction && (
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+          last modified by:
           <span
             className="size-5 rounded-full flex items-center justify-center text-xs"
             style={{ backgroundColor: lastAction.userColor + '20' }}

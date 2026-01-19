@@ -77,43 +77,59 @@ export function useCollaborativeSession(
     typingDebounceMs = DEFAULT_TYPING_DEBOUNCE_MS,
   } = options;
 
+  // Storage keys for this channel
+  const storageKeys = useMemo(() => ({
+    id: `collaborative-session-user-id-${channelName}`,
+    color: `collaborative-session-user-color-${channelName}`,
+    avatar: `collaborative-session-user-avatar-${channelName}`,
+    name: `collaborative-session-user-name-${channelName}`,
+  }), [channelName]);
+
+  // Track if this is a new user (not a reconnect/reload)
+  const isNewUser = useRef(true);
+
   // Generate stable user ID for this session (persisted in sessionStorage to survive reloads)
   const [userId] = useState(() => {
-    const storageKey = `collaborative-session-user-id-${channelName}`;
-    const existingId = sessionStorage.getItem(storageKey);
+    const existingId = sessionStorage.getItem(storageKeys.id);
     if (existingId) {
+      isNewUser.current = false;
       return existingId;
     }
     const newId = generateUserId();
-    sessionStorage.setItem(storageKey, newId);
+    sessionStorage.setItem(storageKeys.id, newId);
     return newId;
   });
 
   const [userColor] = useState(() => {
-    const storageKey = `collaborative-session-user-color-${channelName}`;
-    const existingColor = sessionStorage.getItem(storageKey);
+    const existingColor = sessionStorage.getItem(storageKeys.color);
     if (existingColor) {
       return existingColor;
     }
     const newColor = getRandomColor();
-    sessionStorage.setItem(storageKey, newColor);
+    sessionStorage.setItem(storageKeys.color, newColor);
     return newColor;
   });
 
   const [userAvatar, setUserAvatar] = useState(() => {
     if (initialAvatar) return initialAvatar;
-    const storageKey = `collaborative-session-user-avatar-${channelName}`;
-    const existingAvatar = sessionStorage.getItem(storageKey);
+    const existingAvatar = sessionStorage.getItem(storageKeys.avatar);
     if (existingAvatar) {
       return existingAvatar;
     }
     const newAvatar = getRandomAvatar();
-    sessionStorage.setItem(storageKey, newAvatar);
+    sessionStorage.setItem(storageKeys.avatar, newAvatar);
     return newAvatar;
   });
 
-  // Local state
-  const [currentUserName, setCurrentUserName] = useState(userName);
+  // Local state - persist username
+  const [currentUserName, setCurrentUserName] = useState(() => {
+    const existingName = sessionStorage.getItem(storageKeys.name);
+    if (existingName) {
+      return existingName;
+    }
+    sessionStorage.setItem(storageKeys.name, userName);
+    return userName;
+  });
   const [users, setUsers] = useState<User[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [counter, setCounter] = useState<CounterState>({ value: 0, lastAction: null });
@@ -336,9 +352,14 @@ export function useCollaborativeSession(
 
         case 'state:request': {
           setLoading((prev) => ({ ...prev, isSyncing: true }));
+          // Filter out expired messages before syncing
+          const now = Date.now();
+          const validMessages = chatMessages.filter(
+            (m) => !m.expirationDate || m.expirationDate > now
+          );
           postMessage('state:sync', {
             users: users.map((u) => ({ ...u })),
-            messages: chatMessages,
+            messages: validMessages,
             counter,
             theme,
             activityFeed,
@@ -357,8 +378,10 @@ export function useCollaborativeSession(
             activityFeed: syncedActivity,
           } = payload;
 
+          const isInitialSync = !hasReceivedInitialState.current;
           hasReceivedInitialState.current = true;
 
+          // Sync users - merge with existing, avoiding duplicates
           setUsers((prev) => {
             const existingIds = new Set(prev.map((u) => u.id));
             const newUsers = (syncedUsers as User[]).filter(
@@ -367,22 +390,35 @@ export function useCollaborativeSession(
             return [...prev, ...newUsers];
           });
 
+          // Sync messages - filter expired and merge
+          const now = Date.now();
           setChatMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
             const newMessages = (syncedMessages as ChatMessage[]).filter(
-              (m) => !existingIds.has(m.id)
+              (m) => !existingIds.has(m.id) && (!m.expirationDate || m.expirationDate > now)
             );
             return [...prev, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
           });
 
-          if (counter.lastAction === null && syncedCounter !== undefined) {
-            setCounter(syncedCounter as CounterState);
+          // Sync counter - use the most recent action
+          if (syncedCounter !== undefined) {
+            const synced = syncedCounter as CounterState;
+            setCounter((prev) => {
+              // If we have no action, use synced state
+              if (!prev.lastAction) return synced;
+              // If synced has no action, keep ours
+              if (!synced.lastAction) return prev;
+              // Use the more recent one
+              return synced.lastAction.timestamp > prev.lastAction.timestamp ? synced : prev;
+            });
           }
 
-          if (syncedTheme) {
+          // Sync theme - only on initial sync to avoid overriding user preference
+          if (isInitialSync && syncedTheme) {
             setThemeState(syncedTheme);
           }
 
+          // Sync activity feed - merge and deduplicate
           if (syncedActivity) {
             setActivityFeed((prev) => {
               const existingIds = new Set(prev.map((e) => e.id));
@@ -413,7 +449,10 @@ export function useCollaborativeSession(
     postMessage('user:join', currentUser);
     postMessage('state:request', { userId });
 
-    addActivity('user_joined', userId, currentUserName, userColor);
+    // Only add join activity for truly new users, not reconnects/reloads
+    if (isNewUser.current) {
+      addActivity('user_joined', userId, currentUserName, userColor);
+    }
 
     initializationTimeout.current = setTimeout(() => {
       if (!hasReceivedInitialState.current) {
@@ -421,8 +460,9 @@ export function useCollaborativeSession(
       }
     }, INITIALIZATION_TIMEOUT);
 
+    // Don't send leave message on unmount for page reloads
+    // The heartbeat timeout will handle cleanup for actually closed tabs
     return () => {
-      postMessage('user:leave', { userId });
       if (initializationTimeout.current) {
         clearTimeout(initializationTimeout.current);
       }
@@ -504,15 +544,16 @@ export function useCollaborativeSession(
   const updateUserName = useCallback((name: string) => {
     const oldName = currentUserName;
     setCurrentUserName(name);
+    sessionStorage.setItem(storageKeys.name, name);
     postMessage('user:update', { id: userId, name });
     addActivity('name_changed', userId, name, userColor, { oldName, newName: name });
-  }, [postMessage, userId, currentUserName, userColor, addActivity]);
+  }, [postMessage, userId, currentUserName, userColor, addActivity, storageKeys.name]);
 
   const updateAvatar = useCallback((avatar: string) => {
     setUserAvatar(avatar);
-    sessionStorage.setItem(`collaborative-session-user-avatar-${channelName}`, avatar);
+    sessionStorage.setItem(storageKeys.avatar, avatar);
     postMessage('user:update', { id: userId, avatar });
-  }, [postMessage, userId, channelName]);
+  }, [postMessage, userId, storageKeys.avatar]);
 
   const markTyping = useCallback((typing: boolean) => {
     setIsTyping(typing);
@@ -635,6 +676,16 @@ export function useCollaborativeSession(
     setActivityFeed([]);
   }, []);
 
+  const resetIdentity = useCallback(() => {
+    // Clear all session storage for this channel
+    sessionStorage.removeItem(storageKeys.id);
+    sessionStorage.removeItem(storageKeys.color);
+    sessionStorage.removeItem(storageKeys.avatar);
+    sessionStorage.removeItem(storageKeys.name);
+    // Reload the page to get a new identity
+    window.location.reload();
+  }, [storageKeys]);
+
   // ============================================================================
   // Return Value
   // ============================================================================
@@ -675,5 +726,6 @@ export function useCollaborativeSession(
     // Utility
     ping,
     clearActivityFeed,
+    resetIdentity,
   };
 }
