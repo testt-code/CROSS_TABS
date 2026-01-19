@@ -6,17 +6,26 @@ type ThemeProviderProps = {
   children: React.ReactNode
   defaultTheme?: Theme
   storageKey?: string
+  /** External theme value for synced mode */
+  syncedTheme?: Theme
+  /** Callback when theme changes in synced mode */
+  onThemeChange?: (theme: Theme) => void
 }
 
 export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "vite-ui-theme",
+  syncedTheme,
+  onThemeChange,
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
+  const [localTheme, setLocalTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
+
+  // Use synced theme if provided, otherwise use local theme
+  const theme = syncedTheme ?? localTheme
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -38,9 +47,13 @@ export function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+    setTheme: (newTheme: Theme) => {
+      localStorage.setItem(storageKey, newTheme)
+      if (onThemeChange) {
+        onThemeChange(newTheme)
+      } else {
+        setLocalTheme(newTheme)
+      }
     },
   }
 

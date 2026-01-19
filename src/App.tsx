@@ -4,23 +4,40 @@ import { UserPresencePanel } from "@/components/UserPresencePanel"
 import { SharedCounter } from "@/components/SharedCounter"
 import { ChatPanel } from "@/components/ChatPanel"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
+import type { Theme } from "@/types"
 
-const Dashboard: React.FC = () => {
-  const {
-    users,
-    currentUser,
-    isConnected,
-    loading,
-    counter,
-    incrementCounter,
-    decrementCounter,
-    resetCounter,
-    messages,
-    sendMessage,
-    deleteMessage,
-    markTyping,
-  } = useCollaborativeSession();
 
+type CollaborativeSessionReturn = ReturnType<typeof useCollaborativeSession>;
+
+type DashboardProps = {
+  users: CollaborativeSessionReturn['users'];
+  currentUser: CollaborativeSessionReturn['currentUser'];
+  isConnected: boolean;
+  loading: CollaborativeSessionReturn['loading'];
+  counter: CollaborativeSessionReturn['counter'];
+  incrementCounter: CollaborativeSessionReturn['incrementCounter'];
+  decrementCounter: CollaborativeSessionReturn['decrementCounter'];
+  resetCounter: CollaborativeSessionReturn['resetCounter'];
+  messages: CollaborativeSessionReturn['messages'];
+  sendMessage: CollaborativeSessionReturn['sendMessage'];
+  deleteMessage: CollaborativeSessionReturn['deleteMessage'];
+  markTyping: CollaborativeSessionReturn['markTyping'];
+};
+
+const Dashboard: React.FC<DashboardProps> = ({
+  users,
+  currentUser,
+  isConnected,
+  loading,
+  counter,
+  incrementCounter,
+  decrementCounter,
+  resetCounter,
+  messages,
+  sendMessage,
+  deleteMessage,
+  markTyping,
+}) => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 border-b">
@@ -67,12 +84,51 @@ const Dashboard: React.FC = () => {
       </main>
     </div>
   );
-}
+};
+
+const CollaborativeApp: React.FC = () => {
+  const {
+    users,
+    currentUser,
+    isConnected,
+    loading,
+    counter,
+    incrementCounter,
+    decrementCounter,
+    resetCounter,
+    messages,
+    sendMessage,
+    deleteMessage,
+    markTyping,
+    theme,
+    setTheme,
+  } = useCollaborativeSession();
+
+  return (
+    <ThemeProvider
+      defaultTheme="system"
+      storageKey="vite-ui-theme"
+      syncedTheme={theme}
+      onThemeChange={(newTheme: Theme) => setTheme(newTheme)}
+    >
+      <Dashboard
+        users={users}
+        currentUser={currentUser}
+        isConnected={isConnected}
+        loading={loading}
+        counter={counter}
+        incrementCounter={incrementCounter}
+        decrementCounter={decrementCounter}
+        resetCounter={resetCounter}
+        messages={messages}
+        sendMessage={sendMessage}
+        deleteMessage={deleteMessage}
+        markTyping={markTyping}
+      />
+    </ThemeProvider>
+  );
+};
 
 export const App: React.FC = () => {
-  return (
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <Dashboard />
-    </ThemeProvider>
-  )
+  return <CollaborativeApp />;
 }
