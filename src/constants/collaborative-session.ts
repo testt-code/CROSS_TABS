@@ -12,7 +12,6 @@ export const AVATARS = [
 
 export const HEARTBEAT_INTERVAL = 5000;
 
-// Increased timeout to handle browser throttling in background tabs/windows
 export const USER_TIMEOUT = HEARTBEAT_INTERVAL * 6;
 
 export const INITIALIZATION_TIMEOUT = 1000;

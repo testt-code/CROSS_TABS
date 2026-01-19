@@ -48,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   resetIdentity,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const onlineCount = users.length + 1; // +1 for current user
+  const onlineCount = users.length + 1;
 
   return (
     <div className="min-h-screen bg-background text-foreground">

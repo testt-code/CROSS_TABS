@@ -77,7 +77,6 @@ export function useCollaborativeSession(
     typingDebounceMs = DEFAULT_TYPING_DEBOUNCE_MS,
   } = options;
 
-  // Storage keys for this channel
   const storageKeys = useMemo(() => ({
     id: `collaborative-session-user-id-${channelName}`,
     color: `collaborative-session-user-color-${channelName}`,
@@ -85,10 +84,8 @@ export function useCollaborativeSession(
     name: `collaborative-session-user-name-${channelName}`,
   }), [channelName]);
 
-  // Track if this is a new user (not a reconnect/reload)
   const isNewUser = useRef(true);
 
-  // Generate stable user ID for this session (persisted in sessionStorage to survive reloads)
   const [userId] = useState(() => {
     const existingId = sessionStorage.getItem(storageKeys.id);
     if (existingId) {
@@ -121,7 +118,6 @@ export function useCollaborativeSession(
     return newAvatar;
   });
 
-  // Local state - persist username
   const [currentUserName, setCurrentUserName] = useState(() => {
     const existingName = sessionStorage.getItem(storageKeys.name);
     if (existingName) {
@@ -139,18 +135,15 @@ export function useCollaborativeSession(
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [focusState, setFocusState] = useState<FocusState | null>(null);
 
-  // Loading states
   const [loading, setLoading] = useState<LoadingStates>({
     isInitializing: true,
     isSyncing: false,
     isSendingMessage: false,
   });
 
-  // Track if we've received initial state
   const hasReceivedInitialState = useRef(false);
   const initializationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Set up broadcast channel
   const {
     messages,
     postMessage,
@@ -167,7 +160,6 @@ export function useCollaborativeSession(
     excludedBatchMessageTypes: [...EXCLUDED_BATCH_MESSAGE_TYPES],
   });
 
-  // Current user object
   const currentUser: User = useMemo(() => ({
     id: userId,
     name: currentUserName,
@@ -179,10 +171,6 @@ export function useCollaborativeSession(
     cursor: cursorPosition || undefined,
     focus: focusState || undefined,
   }), [userId, currentUserName, userColor, userAvatar, isTyping, cursorPosition, focusState]);
-
-  // ============================================================================
-  // Activity Feed Helper
-  // ============================================================================
 
   const addActivity = useCallback((
     type: ActivityType,
@@ -206,19 +194,13 @@ export function useCollaborativeSession(
       return updated.slice(0, activityFeedLimit);
     });
 
-    // Broadcast activity to other tabs
     postMessage('activity:event', event);
   }, [activityFeedLimit, postMessage]);
-
-  // ============================================================================
-  // Message Handlers
-  // ============================================================================
 
   useEffect(() => {
     if (messages.length === 0) return;
 
     messages.forEach((msg) => {
-      // Skip messages from self
       if (msg.source === userId) return;
 
       const { type, message: payload } = msg;
@@ -226,6 +208,7 @@ export function useCollaborativeSession(
       switch (type as MessageType) {
         case 'user:join': {
           const newUser: User = payload;
+          if (newUser.id === userId) break;
           setUsers((prev) => {
             if (prev.some((u) => u.id === newUser.id)) {
               return prev.map((u) =>
@@ -234,7 +217,6 @@ export function useCollaborativeSession(
             }
             return [...prev, { ...newUser, lastSeen: Date.now() }];
           });
-          // Respond with heartbeat instead of join to avoid infinite loop
           postMessage('user:heartbeat', { userId, user: currentUser });
           break;
         }
@@ -295,6 +277,7 @@ export function useCollaborativeSession(
 
         case 'user:heartbeat': {
           const { userId: heartbeatUserId, user } = payload;
+          if (heartbeatUserId === userId) break;
           setUsers((prev) => {
             const existing = prev.find((u) => u.id === heartbeatUserId);
             if (existing) {
@@ -353,7 +336,6 @@ export function useCollaborativeSession(
 
         case 'state:request': {
           setLoading((prev) => ({ ...prev, isSyncing: true }));
-          // Filter out expired messages before syncing
           const now = Date.now();
           const validMessages = chatMessages.filter(
             (m) => !m.expirationDate || m.expirationDate > now
@@ -382,7 +364,6 @@ export function useCollaborativeSession(
           const isInitialSync = !hasReceivedInitialState.current;
           hasReceivedInitialState.current = true;
 
-          // Sync users - merge with existing, avoiding duplicates
           setUsers((prev) => {
             const existingIds = new Set(prev.map((u) => u.id));
             const newUsers = (syncedUsers as User[]).filter(
@@ -391,7 +372,6 @@ export function useCollaborativeSession(
             return [...prev, ...newUsers];
           });
 
-          // Sync messages - filter expired and merge
           const now = Date.now();
           setChatMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
@@ -401,25 +381,19 @@ export function useCollaborativeSession(
             return [...prev, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
           });
 
-          // Sync counter - use the most recent action
           if (syncedCounter !== undefined) {
             const synced = syncedCounter as CounterState;
             setCounter((prev) => {
-              // If we have no action, use synced state
               if (!prev.lastAction) return synced;
-              // If synced has no action, keep ours
               if (!synced.lastAction) return prev;
-              // Use the more recent one
               return synced.lastAction.timestamp > prev.lastAction.timestamp ? synced : prev;
             });
           }
 
-          // Sync theme - only on initial sync to avoid overriding user preference
           if (isInitialSync && syncedTheme) {
             setThemeState(syncedTheme);
           }
 
-          // Sync activity feed - merge and deduplicate
           if (syncedActivity) {
             setActivityFeed((prev) => {
               const existingIds = new Set(prev.map((e) => e.id));
@@ -441,16 +415,10 @@ export function useCollaborativeSession(
     clearReceivedMessages();
   }, [messages, userId, currentUser, postMessage, clearReceivedMessages, users, chatMessages, counter, theme, activityFeed, activityFeedLimit]);
 
-  // ============================================================================
-  // Presence Management
-  // ============================================================================
-
-  // Announce presence on mount and request state
   useEffect(() => {
     postMessage('user:join', currentUser);
     postMessage('state:request', { userId });
 
-    // Only add join activity for truly new users, not reconnects/reloads
     if (isNewUser.current) {
       addActivity('user_joined', userId, currentUserName, userColor);
     }
@@ -461,8 +429,6 @@ export function useCollaborativeSession(
       }
     }, INITIALIZATION_TIMEOUT);
 
-    // Don't send leave message on unmount for page reloads
-    // The heartbeat timeout will handle cleanup for actually closed tabs
     return () => {
       if (initializationTimeout.current) {
         clearTimeout(initializationTimeout.current);
@@ -471,7 +437,6 @@ export function useCollaborativeSession(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Heartbeat to maintain presence
   useEffect(() => {
     const sendHeartbeat = () => {
       postMessage('user:heartbeat', { userId, user: currentUser });
@@ -479,7 +444,6 @@ export function useCollaborativeSession(
 
     const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
-    // Send heartbeat immediately when page becomes visible (handles browser throttling)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         sendHeartbeat();
@@ -494,7 +458,6 @@ export function useCollaborativeSession(
     };
   }, [postMessage, userId, currentUser]);
 
-  // Clean up inactive users
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -519,7 +482,6 @@ export function useCollaborativeSession(
     return () => clearInterval(interval);
   }, [activityFeedLimit]);
 
-  // Clean up expired messages
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -534,10 +496,6 @@ export function useCollaborativeSession(
     return () => clearInterval(interval);
   }, []);
 
-  // ============================================================================
-  // Debounced Actions
-  // ============================================================================
-
   const debouncedPostCursor = useDebounce(
     (cursor: CursorPosition | null) => {
       postMessage('user:cursor', { userId, cursor });
@@ -551,10 +509,6 @@ export function useCollaborativeSession(
     },
     typingDebounceMs
   );
-
-  // ============================================================================
-  // Actions
-  // ============================================================================
 
   const updateUserName = useCallback((name: string) => {
     const oldName = currentUserName;
@@ -692,21 +646,14 @@ export function useCollaborativeSession(
   }, []);
 
   const resetIdentity = useCallback(() => {
-    // Clear all session storage for this channel
     sessionStorage.removeItem(storageKeys.id);
     sessionStorage.removeItem(storageKeys.color);
     sessionStorage.removeItem(storageKeys.avatar);
     sessionStorage.removeItem(storageKeys.name);
-    // Reload the page to get a new identity
     window.location.reload();
   }, [storageKeys]);
 
-  // ============================================================================
-  // Return Value
-  // ============================================================================
-
   return {
-    // State
     users,
     messages: chatMessages,
     counter,
@@ -717,28 +664,23 @@ export function useCollaborativeSession(
     error,
     loading,
 
-    // User actions
     updateUserName,
     updateAvatar,
     markTyping,
     updateCursor,
     updateFocus,
 
-    // Chat actions
     sendMessage,
     deleteMessage,
     clearMessages,
 
-    // Counter actions
     updateCounter,
     incrementCounter,
     decrementCounter,
     resetCounter,
 
-    // Theme actions
     setTheme,
 
-    // Utility
     ping,
     clearActivityFeed,
     resetIdentity,

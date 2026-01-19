@@ -24,7 +24,6 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
 
-  // Use synced theme if provided, otherwise use local theme
   const theme = syncedTheme ?? localTheme
 
   useEffect(() => {
