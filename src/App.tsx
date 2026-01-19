@@ -89,22 +89,40 @@ const Dashboard: React.FC<DashboardProps> = ({
           `}
         >
           <div className="flex items-center justify-between p-4 border-b md:hidden">
-            <span className="font-semibold">Users</span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Close menu"
-            >
-              <X className="size-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Users</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {onlineCount} online
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isConnected ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close menu"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
           </div>
-          <div className="h-[calc(100vh-65px)] md:h-full overflow-hidden">
+          <div className="h-[calc(100vh-130px)] md:h-full overflow-hidden">
             <UserPresencePanel
               users={users}
               currentUser={currentUser}
               isConnected={isConnected}
               loading={loading.isInitializing}
+              hideHeader
             />
           </div>
         </aside>
