@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Menu, X, Users } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -7,9 +7,10 @@ import { NavbarCounter } from "@/components/NavbarCounter"
 import { ChatPanel } from "@/components/ChatPanel"
 import { ActivityFeed } from "@/components/ActivityFeed"
 import { RestartIdentityButton } from "@/components/RestartIdentityButton"
+import { CursorOverlay } from "@/components/CursorOverlay"
 import { Button } from "@/components/ui/button"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
-import type { Theme } from "@/types"
+import type { Theme, CursorPosition } from "@/types"
 
 
 type CollaborativeSessionReturn = ReturnType<typeof useCollaborativeSession>;
@@ -29,6 +30,7 @@ type DashboardProps = {
   markTyping: CollaborativeSessionReturn['markTyping'];
   activityFeed: CollaborativeSessionReturn['activityFeed'];
   resetIdentity: CollaborativeSessionReturn['resetIdentity'];
+  updateCursor: CollaborativeSessionReturn['updateCursor'];
 };
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -46,12 +48,36 @@ const Dashboard: React.FC<DashboardProps> = ({
   markTyping,
   activityFeed,
   resetIdentity,
+  updateCursor,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const onlineCount = users.length + 1; // +1 for current user
 
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const position: CursorPosition = {
+      x: e.clientX,
+      y: e.clientY,
+    };
+    updateCursor(position);
+  }, [updateCursor]);
+
+  const handleMouseLeave = useCallback(() => {
+    updateCursor(null);
+  }, [updateCursor]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [handleMouseMove, handleMouseLeave]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <CursorOverlay users={users} currentUserId={currentUser.id} />
       <header className="flex items-center justify-between p-3 sm:p-4 border-b gap-2">
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
@@ -186,6 +212,7 @@ const CollaborativeApp: React.FC = () => {
     markTyping,
     activityFeed,
     resetIdentity,
+    updateCursor,
     theme,
     setTheme,
   } = useCollaborativeSession();
@@ -212,6 +239,7 @@ const CollaborativeApp: React.FC = () => {
         markTyping={markTyping}
         activityFeed={activityFeed}
         resetIdentity={resetIdentity}
+        updateCursor={updateCursor}
       />
     </ThemeProvider>
   );
