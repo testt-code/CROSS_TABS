@@ -137,18 +137,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       <div className="p-4 border-t">
         <div className="flex gap-2">
-          <div className="flex-1 relative">
+          <div className="flex-1 flex">
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Type a message... (Shift+Enter for new line)"
-              className="w-full px-3 py-2 pr-10 text-sm rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 w-full px-3 py-2 pr-10 text-sm rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
               rows={2}
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 items-center justify-center">
             <div className="relative">
               <Button
                 variant={expirationDuration > 0 ? 'secondary' : 'ghost'}
