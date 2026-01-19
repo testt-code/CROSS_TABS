@@ -77,10 +77,40 @@ export function useCollaborativeSession(
     typingDebounceMs = DEFAULT_TYPING_DEBOUNCE_MS,
   } = options;
 
-  // Generate stable user ID for this session
-  const [userId] = useState(() => generateUserId());
-  const [userColor] = useState(() => getRandomColor());
-  const [userAvatar, setUserAvatar] = useState(() => initialAvatar || getRandomAvatar());
+  // Generate stable user ID for this session (persisted in sessionStorage to survive reloads)
+  const [userId] = useState(() => {
+    const storageKey = `collaborative-session-user-id-${channelName}`;
+    const existingId = sessionStorage.getItem(storageKey);
+    if (existingId) {
+      return existingId;
+    }
+    const newId = generateUserId();
+    sessionStorage.setItem(storageKey, newId);
+    return newId;
+  });
+
+  const [userColor] = useState(() => {
+    const storageKey = `collaborative-session-user-color-${channelName}`;
+    const existingColor = sessionStorage.getItem(storageKey);
+    if (existingColor) {
+      return existingColor;
+    }
+    const newColor = getRandomColor();
+    sessionStorage.setItem(storageKey, newColor);
+    return newColor;
+  });
+
+  const [userAvatar, setUserAvatar] = useState(() => {
+    if (initialAvatar) return initialAvatar;
+    const storageKey = `collaborative-session-user-avatar-${channelName}`;
+    const existingAvatar = sessionStorage.getItem(storageKey);
+    if (existingAvatar) {
+      return existingAvatar;
+    }
+    const newAvatar = getRandomAvatar();
+    sessionStorage.setItem(storageKey, newAvatar);
+    return newAvatar;
+  });
 
   // Local state
   const [currentUserName, setCurrentUserName] = useState(userName);
@@ -480,8 +510,9 @@ export function useCollaborativeSession(
 
   const updateAvatar = useCallback((avatar: string) => {
     setUserAvatar(avatar);
+    sessionStorage.setItem(`collaborative-session-user-avatar-${channelName}`, avatar);
     postMessage('user:update', { id: userId, avatar });
-  }, [postMessage, userId]);
+  }, [postMessage, userId, channelName]);
 
   const markTyping = useCallback((typing: boolean) => {
     setIsTyping(typing);
