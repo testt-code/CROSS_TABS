@@ -113,15 +113,3 @@ src/
 │   └── ThemeContext.ts              # Theme provider
 └── types.ts                         # TypeScript definitions
 ```
-
-## Browser Support
-
-The Broadcast Channel API is supported in all modern browsers:
-- Chrome 54+
-- Firefox 38+
-- Edge 79+
-- Safari 15.4+
-
-## License
-
-MIT
