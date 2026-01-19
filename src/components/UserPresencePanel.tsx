@@ -32,6 +32,7 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
 
   useEffect(() => {
     if (loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsStabilized(false);
       return;
     }

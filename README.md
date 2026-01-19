@@ -1,73 +1,127 @@
-# React + TypeScript + Vite
+# Cross-Tabs
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A real-time collaborative application that enables multiple browser tabs or windows to communicate and synchronize state without a backend server. Built with React and the Broadcast Channel API.
 
-Currently, two official plugins are available:
+**[Live Demo](https://cross-tabs.vercel.app/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Cross-Tab Communication** - Seamless real-time sync between browser tabs/windows using the Broadcast Channel API
+- **User Presence** - Live user tracking with avatars, colors, and online status indicators
+- **Real-Time Chat** - Global chat with typing indicators, message deletion, and configurable auto-expiration
+- **Shared Counter** - Synchronized counter that all connected users can modify
+- **Theme Sync** - Light/Dark/System theme preferences synchronized across all tabs
+- **Activity Feed** - Live event log tracking joins, leaves, messages, and state changes
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **React 19** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **Radix UI** for accessible components
+- **react-broadcast-sync** for cross-tab communication
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js 20+
+- npm
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+```bash
+git clone https://github.com/testt-code/CROSS_TABS.git
+cd CROSS_TABS
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+Open multiple browser tabs at `http://localhost:5173` to see the cross-tab communication in action.
+
+### Build
+
+```bash
+npm run build
+npm run preview
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+## How It Works
+
+### Broadcast Channel API
+
+The app uses the [Broadcast Channel API](https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API) via `react-broadcast-sync` to enable communication between browser contexts (tabs, windows, iframes) of the same origin without a server.
+
+### Message Types
+
+The system uses a message-based architecture with the following types:
+
+| Category | Messages |
+|----------|----------|
+| User | `user:join`, `user:leave`, `user:update`, `user:typing`, `user:heartbeat` |
+| Chat | `chat:message`, `chat:delete`, `chat:clear` |
+| State | `counter:update`, `theme:update`, `activity:event` |
+| Sync | `state:request`, `state:sync` |
+
+### State Synchronization Flow
+
+1. **Join** - New user broadcasts join message with profile (name, avatar, color)
+2. **State Request** - New user requests current state from existing users
+3. **State Sync** - Existing user responds with full state (messages, counter, theme, activity)
+4. **Heartbeat** - Users send heartbeat every 5 seconds to signal presence
+5. **Timeout** - Users inactive for 30+ seconds are automatically removed
+
+### Key Configuration
+
+```typescript
+HEARTBEAT_INTERVAL = 5000ms    // Presence check interval
+USER_TIMEOUT = 30000ms         // Remove inactive users after this
+ACTIVITY_FEED_LIMIT = 50       // Max events retained
+```
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── ui/                    # Base UI components
+│   ├── Chat*/                 # Chat components
+│   ├── User*/                 # User presence components
+│   ├── Activity*/             # Activity feed
+│   └── Shared*/               # Shared state (counter)
+├── hooks/
+│   ├── useCollaborativeSession.ts   # Main orchestration hook
+│   ├── useTheme.ts                  # Theme management
+│   └── useDebounce.ts               # Debounce utility
+├── lib/
+│   ├── collaborative-session.ts     # ID/color/avatar generation
+│   └── time.ts                      # Time formatting
+├── constants/
+│   └── collaborative-session.ts     # Configuration constants
+├── context/
+│   └── ThemeContext.ts              # Theme provider
+└── types.ts                         # TypeScript definitions
+```
+
+## Browser Support
+
+The Broadcast Channel API is supported in all modern browsers:
+- Chrome 54+
+- Firefox 38+
+- Edge 79+
+- Safari 15.4+
+
+## License
+
+MIT
