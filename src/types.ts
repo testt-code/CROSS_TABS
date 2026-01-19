@@ -32,6 +32,11 @@ export interface ChatMessage {
   userAvatar: string;
   text: string;
   timestamp: number;
+  expirationDate?: number;
+}
+
+export interface SendMessageOptions {
+  expirationDuration?: number;
 }
 
 export type CounterAction = 'increment' | 'decrement' | 'reset' | 'set';
@@ -91,7 +96,8 @@ export interface CollaborativeActions {
   updateCursor: (position: CursorPosition | null) => void;
   updateFocus: (focus: FocusState | null) => void;
 
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, options?: SendMessageOptions) => void;
+  deleteMessage: (messageId: string) => void;
   clearMessages: () => void;
 
   updateCounter: (value: number) => void;
@@ -132,6 +138,7 @@ export type MessageType =
   | 'user:cursor'
   | 'user:focus'
   | 'chat:message'
+  | 'chat:delete'
   | 'chat:clear'
   | 'counter:update'
   | 'theme:update'

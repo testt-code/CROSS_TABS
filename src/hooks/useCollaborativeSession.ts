@@ -16,6 +16,7 @@ import type {
   CounterState,
   CounterAction,
   CounterLastAction,
+  SendMessageOptions,
 } from '../types';
 
 import {
@@ -53,6 +54,7 @@ const REGISTERED_MESSAGE_TYPES: MessageType[] = [
   'user:cursor',
   'user:focus',
   'chat:message',
+  'chat:delete',
   'chat:clear',
   'counter:update',
   'theme:update',
@@ -269,6 +271,12 @@ export function useCollaborativeSession(
           break;
         }
 
+        case 'chat:delete': {
+          const { messageId } = payload;
+          setChatMessages((prev) => prev.filter((m) => m.id !== messageId));
+          break;
+        }
+
         case 'chat:clear': {
           setChatMessages([]);
           break;
@@ -426,6 +434,21 @@ export function useCollaborativeSession(
     return () => clearInterval(interval);
   }, [activityFeedLimit]);
 
+  // Clean up expired messages
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setChatMessages((prev) => {
+        const validMessages = prev.filter(
+          (m) => !m.expirationDate || m.expirationDate > now
+        );
+        return validMessages.length !== prev.length ? validMessages : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // ============================================================================
   // Debounced Actions
   // ============================================================================
@@ -475,11 +498,12 @@ export function useCollaborativeSession(
     postMessage('user:focus', { userId, focus });
   }, [postMessage, userId]);
 
-  const sendMessage = useCallback((text: string) => {
+  const sendMessage = useCallback((text: string, options?: SendMessageOptions) => {
     if (!text.trim()) return;
 
     setLoading((prev) => ({ ...prev, isSendingMessage: true }));
 
+    const now = Date.now();
     const chatMsg: ChatMessage = {
       id: generateId(),
       userId,
@@ -487,7 +511,10 @@ export function useCollaborativeSession(
       userColor,
       userAvatar,
       text: text.trim(),
-      timestamp: Date.now(),
+      timestamp: now,
+      expirationDate: options?.expirationDuration
+        ? now + options.expirationDuration
+        : undefined,
     };
 
     setChatMessages((prev) => [...prev, chatMsg]);
@@ -497,6 +524,11 @@ export function useCollaborativeSession(
 
     setLoading((prev) => ({ ...prev, isSendingMessage: false }));
   }, [postMessage, userId, currentUserName, userColor, userAvatar, markTyping, addActivity]);
+
+  const deleteMessage = useCallback((messageId: string) => {
+    setChatMessages((prev) => prev.filter((m) => m.id !== messageId));
+    postMessage('chat:delete', { messageId });
+  }, [postMessage]);
 
   const clearMessages = useCallback(() => {
     setChatMessages([]);
@@ -597,6 +629,7 @@ export function useCollaborativeSession(
 
     // Chat actions
     sendMessage,
+    deleteMessage,
     clearMessages,
 
     // Counter actions
