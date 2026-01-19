@@ -3,8 +3,9 @@ import { Menu, X, Users } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserPresencePanel } from "@/components/UserPresencePanel"
-import { SharedCounter } from "@/components/SharedCounter"
+import { NavbarCounter } from "@/components/NavbarCounter"
 import { ChatPanel } from "@/components/ChatPanel"
+import { ActivityFeed } from "@/components/ActivityFeed"
 import { Button } from "@/components/ui/button"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
 import type { Theme } from "@/types"
@@ -25,6 +26,7 @@ type DashboardProps = {
   sendMessage: CollaborativeSessionReturn['sendMessage'];
   deleteMessage: CollaborativeSessionReturn['deleteMessage'];
   markTyping: CollaborativeSessionReturn['markTyping'];
+  activityFeed: CollaborativeSessionReturn['activityFeed'];
 };
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -40,14 +42,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   sendMessage,
   deleteMessage,
   markTyping,
+  activityFeed,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const onlineCount = users.length + 1; // +1 for current user
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between p-3 sm:p-4 border-b gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -57,7 +60,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Menu className="size-5" />
           </Button>
-          <h1 className="text-xl font-bold">Cross Tabs</h1>
+          <h1 className="text-lg sm:text-xl font-bold">Cross Tabs</h1>
           <button
             onClick={() => setSidebarOpen(true)}
             className="flex md:hidden items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
@@ -66,7 +69,16 @@ const Dashboard: React.FC<DashboardProps> = ({
             {onlineCount}
           </button>
         </div>
-        <ThemeToggle />
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          <NavbarCounter
+            counter={counter}
+            onIncrement={incrementCounter}
+            onDecrement={decrementCounter}
+            onReset={resetCounter}
+          />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex h-[calc(100vh-65px)] relative">
@@ -122,27 +134,15 @@ const Dashboard: React.FC<DashboardProps> = ({
               currentUser={currentUser}
               isConnected={isConnected}
               loading={loading.isInitializing}
-              hideHeader
+              mobileDrawerMode
             />
           </div>
         </aside>
 
         {/* Main content */}
         <div className="flex-1 p-3 sm:p-4 overflow-auto">
-          <p className="text-muted-foreground mb-4 text-sm sm:text-base">
-            Open this page in multiple tabs to see real-time collaboration!
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-4">
-              <SharedCounter
-                counter={counter}
-                onIncrement={incrementCounter}
-                onDecrement={decrementCounter}
-                onReset={resetCounter}
-                currentUserId={currentUser.id}
-              />
-            </div>
-            <div className="min-h-[350px] sm:min-h-[400px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+            <div className="min-h-[350px] lg:h-full">
               <ChatPanel
                 messages={messages}
                 users={users}
@@ -151,6 +151,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                 onDeleteMessage={deleteMessage}
                 onTyping={markTyping}
                 loading={loading.isInitializing}
+              />
+            </div>
+            <div className="min-h-[300px] lg:h-full">
+              <ActivityFeed
+                activities={activityFeed}
+                currentUserId={currentUser.id}
               />
             </div>
           </div>
@@ -174,6 +180,7 @@ const CollaborativeApp: React.FC = () => {
     sendMessage,
     deleteMessage,
     markTyping,
+    activityFeed,
     theme,
     setTheme,
   } = useCollaborativeSession();
@@ -198,6 +205,7 @@ const CollaborativeApp: React.FC = () => {
         sendMessage={sendMessage}
         deleteMessage={deleteMessage}
         markTyping={markTyping}
+        activityFeed={activityFeed}
       />
     </ThemeProvider>
   );

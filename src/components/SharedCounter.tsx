@@ -1,13 +1,13 @@
 import { Minus, Plus, RotateCcw } from 'lucide-react';
-import type { CounterState } from '@/types';
+import type { CollaborativeActions, CounterState } from '@/types';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from '@/lib/time';
 
 type SharedCounterProps = {
   counter: CounterState;
-  onIncrement: () => void;
-  onDecrement: () => void;
-  onReset: () => void;
+  onIncrement: CollaborativeActions['incrementCounter'];
+  onDecrement: CollaborativeActions['decrementCounter'];
+  onReset: CollaborativeActions['resetCounter'];
   currentUserId: string;
 };
 
