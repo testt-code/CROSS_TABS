@@ -4,7 +4,11 @@
       "Bash(npx shadcn@latest init -d -y)",
       "Bash(npx shadcn@latest add button dropdown-menu -y)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git -C /Users/sabavar/Projects/cross-tabs log --oneline -10)",
+      "Bash(git -C /Users/sabavar/Projects/cross-tabs status)",
+      "Bash(git -C /Users/sabavar/Projects/cross-tabs show HEAD:src/hooks/index.ts)",
+      "Bash(git -C /Users/sabavar/Projects/cross-tabs show --stat dfed210)"
     ]
   }
 }
