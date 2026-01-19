@@ -7,6 +7,7 @@ type UserPresencePanelProps = {
   currentUser: User;
   isConnected: boolean;
   loading?: boolean;
+  hideHeader?: boolean;
 }
 
 type UserNotification = {
@@ -23,6 +24,7 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
   currentUser,
   isConnected,
   loading = false,
+  hideHeader = false,
 }) => {
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const prevUsersRef = useRef<Map<string, User>>(new Map());
@@ -77,24 +79,26 @@ export const UserPresencePanel: React.FC<UserPresencePanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <h2 className="font-semibold">Users</h2>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-            {onlineCount} online
-          </span>
+      {!hideHeader && (
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">Users</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              {onlineCount} online
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`}
-          />
-          <span className="text-xs text-muted-foreground">
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
-      </div>
+      )}
 
       {notifications.length > 0 && (
         <div className="p-2 space-y-1">

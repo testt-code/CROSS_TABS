@@ -1,8 +1,11 @@
+import { useState } from "react"
+import { Menu, X, Users } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserPresencePanel } from "@/components/UserPresencePanel"
 import { SharedCounter } from "@/components/SharedCounter"
 import { ChatPanel } from "@/components/ChatPanel"
+import { Button } from "@/components/ui/button"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
 import type { Theme } from "@/types"
 
@@ -38,27 +41,80 @@ const Dashboard: React.FC<DashboardProps> = ({
   deleteMessage,
   markTyping,
 }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const onlineCount = users.length + 1; // +1 for current user
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 border-b">
-        <h1 className="text-xl font-bold">Cross Tabs</h1>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="md:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="size-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Cross Tabs</h1>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex md:hidden items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
+          >
+            <Users className="size-3" />
+            {onlineCount}
+          </button>
+        </div>
         <ThemeToggle />
       </header>
-      <main className="flex h-[calc(100vh-65px)]">
-        <aside className="w-72 border-r shrink-0">
-          <UserPresencePanel
-            users={users}
-            currentUser={currentUser}
-            isConnected={isConnected}
-            loading={loading.isInitializing}
+
+      <main className="flex h-[calc(100vh-65px)] relative">
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
+        )}
+
+        {/* Sidebar */}
+        <aside
+          className={`
+            fixed md:relative inset-y-0 left-0 z-50 md:z-0
+            w-72 bg-background border-r shrink-0
+            transform transition-transform duration-300 ease-in-out
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            md:transform-none
+          `}
+        >
+          <div className="flex items-center justify-between p-4 border-b md:hidden">
+            <span className="font-semibold">Users</span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="size-5" />
+            </Button>
+          </div>
+          <div className="h-[calc(100vh-65px)] md:h-full overflow-hidden">
+            <UserPresencePanel
+              users={users}
+              currentUser={currentUser}
+              isConnected={isConnected}
+              loading={loading.isInitializing}
+            />
+          </div>
         </aside>
 
-        <div className="flex-1 p-4 overflow-hidden">
-          <p className="text-muted-foreground mb-4">
+        {/* Main content */}
+        <div className="flex-1 p-3 sm:p-4 overflow-auto">
+          <p className="text-muted-foreground mb-4 text-sm sm:text-base">
             Open this page in multiple tabs to see real-time collaboration!
           </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100%-2rem)]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="flex flex-col gap-4">
               <SharedCounter
                 counter={counter}
@@ -68,7 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 currentUserId={currentUser.id}
               />
             </div>
-            <div className="min-h-[400px] lg:h-full">
+            <div className="min-h-[350px] sm:min-h-[400px]">
               <ChatPanel
                 messages={messages}
                 users={users}
