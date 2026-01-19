@@ -34,6 +34,24 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export type CounterAction = 'increment' | 'decrement' | 'reset' | 'set';
+
+export interface CounterLastAction {
+  userId: string;
+  userName: string;
+  userColor: string;
+  userAvatar: string;
+  action: CounterAction;
+  previousValue: number;
+  newValue: number;
+  timestamp: number;
+}
+
+export interface CounterState {
+  value: number;
+  lastAction: CounterLastAction | null;
+}
+
 export type ActivityType =
   | 'user_joined'
   | 'user_left'
@@ -61,7 +79,7 @@ export interface LoadingStates {
 export interface CollaborativeState {
   users: User[];
   messages: ChatMessage[];
-  counter: number;
+  counter: CounterState;
   theme: Theme;
   activityFeed: ActivityEvent[];
 }

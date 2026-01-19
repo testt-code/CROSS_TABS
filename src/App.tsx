@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserPresencePanel } from "@/components/UserPresencePanel"
+import { SharedCounter } from "@/components/SharedCounter"
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession"
 
 const Dashboard: React.FC = () => {
@@ -9,6 +10,10 @@ const Dashboard: React.FC = () => {
     currentUser,
     isConnected,
     loading,
+    counter,
+    incrementCounter,
+    decrementCounter,
+    resetCounter,
   } = useCollaborativeSession();
 
   return (
@@ -28,9 +33,18 @@ const Dashboard: React.FC = () => {
         </aside>
 
         <div className="flex-1 p-4">
-          <p className="text-muted-foreground">
-            Open this page in multiple tabs to see real-time user presence!
+          <p className="text-muted-foreground mb-6">
+            Open this page in multiple tabs to see real-time collaboration!
           </p>
+          <div className="max-w-md">
+            <SharedCounter
+              counter={counter}
+              onIncrement={incrementCounter}
+              onDecrement={decrementCounter}
+              onReset={resetCounter}
+              currentUserId={currentUser.id}
+            />
+          </div>
         </div>
       </main>
     </div>

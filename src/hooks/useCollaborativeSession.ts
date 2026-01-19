@@ -13,6 +13,9 @@ import type {
   MessageType,
   UseCollaborativeSessionOptions,
   UseCollaborativeSessionReturn,
+  CounterState,
+  CounterAction,
+  CounterLastAction,
 } from '../types';
 
 import {
@@ -81,7 +84,7 @@ export function useCollaborativeSession(
   const [currentUserName, setCurrentUserName] = useState(userName);
   const [users, setUsers] = useState<User[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [counter, setCounter] = useState(0);
+  const [counter, setCounter] = useState<CounterState>({ value: 0, lastAction: null });
   const [theme, setThemeState] = useState<Theme>(initialTheme);
   const [activityFeed, setActivityFeed] = useState<ActivityEvent[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -272,8 +275,8 @@ export function useCollaborativeSession(
         }
 
         case 'counter:update': {
-          const { value } = payload;
-          setCounter(value);
+          const counterState: CounterState = payload;
+          setCounter(counterState);
           break;
         }
 
@@ -334,8 +337,8 @@ export function useCollaborativeSession(
             return [...prev, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
           });
 
-          if (chatMessages.length === 0 && syncedCounter !== undefined) {
-            setCounter(syncedCounter);
+          if (counter.lastAction === null && syncedCounter !== undefined) {
+            setCounter(syncedCounter as CounterState);
           }
 
           if (syncedTheme) {
@@ -500,37 +503,59 @@ export function useCollaborativeSession(
     postMessage('chat:clear', {});
   }, [postMessage]);
 
+  const createCounterState = useCallback((
+    newValue: number,
+    previousValue: number,
+    action: CounterAction
+  ): CounterState => {
+    const lastAction: CounterLastAction = {
+      userId,
+      userName: currentUserName,
+      userColor,
+      userAvatar,
+      action,
+      previousValue,
+      newValue,
+      timestamp: Date.now(),
+    };
+    return { value: newValue, lastAction };
+  }, [userId, currentUserName, userColor, userAvatar]);
+
   const updateCounter = useCallback((value: number) => {
-    const oldValue = counter;
-    setCounter(value);
-    postMessage('counter:update', { value });
+    const oldValue = counter.value;
+    const newCounterState = createCounterState(value, oldValue, 'set');
+    setCounter(newCounterState);
+    postMessage('counter:update', newCounterState);
     addActivity('counter_changed', userId, currentUserName, userColor, { oldValue, newValue: value });
-  }, [postMessage, counter, userId, currentUserName, userColor, addActivity]);
+  }, [postMessage, counter.value, userId, currentUserName, userColor, addActivity, createCounterState]);
 
   const incrementCounter = useCallback(() => {
     setCounter((prev) => {
-      const newValue = prev + 1;
-      postMessage('counter:update', { value: newValue });
-      addActivity('counter_changed', userId, currentUserName, userColor, { oldValue: prev, newValue });
-      return newValue;
+      const newValue = prev.value + 1;
+      const newCounterState = createCounterState(newValue, prev.value, 'increment');
+      postMessage('counter:update', newCounterState);
+      addActivity('counter_changed', userId, currentUserName, userColor, { oldValue: prev.value, newValue });
+      return newCounterState;
     });
-  }, [postMessage, userId, currentUserName, userColor, addActivity]);
+  }, [postMessage, userId, currentUserName, userColor, addActivity, createCounterState]);
 
   const decrementCounter = useCallback(() => {
     setCounter((prev) => {
-      const newValue = prev - 1;
-      postMessage('counter:update', { value: newValue });
-      addActivity('counter_changed', userId, currentUserName, userColor, { oldValue: prev, newValue });
-      return newValue;
+      const newValue = prev.value - 1;
+      const newCounterState = createCounterState(newValue, prev.value, 'decrement');
+      postMessage('counter:update', newCounterState);
+      addActivity('counter_changed', userId, currentUserName, userColor, { oldValue: prev.value, newValue });
+      return newCounterState;
     });
-  }, [postMessage, userId, currentUserName, userColor, addActivity]);
+  }, [postMessage, userId, currentUserName, userColor, addActivity, createCounterState]);
 
   const resetCounter = useCallback(() => {
-    const oldValue = counter;
-    setCounter(0);
-    postMessage('counter:update', { value: 0 });
+    const oldValue = counter.value;
+    const newCounterState = createCounterState(0, oldValue, 'reset');
+    setCounter(newCounterState);
+    postMessage('counter:update', newCounterState);
     addActivity('counter_changed', userId, currentUserName, userColor, { oldValue, newValue: 0 });
-  }, [postMessage, counter, userId, currentUserName, userColor, addActivity]);
+  }, [postMessage, counter.value, userId, currentUserName, userColor, addActivity, createCounterState]);
 
   const setTheme = useCallback((newTheme: Theme) => {
     const oldTheme = theme;
